@@ -18,10 +18,14 @@ struct Task {
 
     // Initialize a new task
     // `note` and `dueDate` properties have default values provided if none are passed into the init by the caller.
-    init(title: String, note: String? = nil, dueDate: Date = Date()) {
+    init(title: String, note: String? = nil, dueDate: Date = Date(), createdDate: Date = Date(), id: String = UUID().uuidString) {
         self.title = title
         self.note = note
         self.dueDate = dueDate
+        self.createdDate = createdDate
+        self.id = id
+        self.isComplete = false
+        self.completedDate = nil
     }
 
     // A boolean to determine if the task has been completed. Defaults to `false`
@@ -44,33 +48,45 @@ struct Task {
 
     // The date the task was created
     // This property is set as the current date whenever the task is initially created.
-    let createdDate: Date = Date()
+    var createdDate: Date = Date()
 
     // An id (Universal Unique Identifier) used to identify a task.
-    let id: String = UUID().uuidString
+    var id: String = UUID().uuidString
 }
+
+extension Task: Codable {}
 
 // MARK: - Task + UserDefaults
 extension Task {
 
-
+    // Key for saving tasks in UserDefaults
+    private static let tasksKey = "tasks"
     // Given an array of tasks, encodes them to data and saves to UserDefaults.
     static func save(_ tasks: [Task]) {
-
-        // TODO: Save the array of tasks
+        let encoder = JSONEncoder()
+        if let encodedTasks = try? encoder.encode(tasks) {
+            UserDefaults.standard.set(encodedTasks, forKey: tasksKey)
+        }
     }
 
     // Retrieve an array of saved tasks from UserDefaults.
     static func getTasks() -> [Task] {
-        
-        // TODO: Get the array of saved tasks from UserDefaults
-
-        return [] // 👈 replace with returned saved tasks
+        let decoder = JSONDecoder()
+        if let tasksData = UserDefaults.standard.data(forKey: tasksKey),
+            let tasks = try? decoder.decode([Task].self, from: tasksData) {
+            return tasks
+        }
+        return []
     }
 
     // Add a new task or update an existing task with the current task.
     func save() {
-
-        // TODO: Save the current task
+        var tasks = Task.getTasks()
+        if let index = tasks.firstIndex(where: { $0.id == self.id }) {
+            tasks[index] = self
+        } else {
+            tasks.append(self)
+        }
+        Task.save(tasks)
     }
 }
